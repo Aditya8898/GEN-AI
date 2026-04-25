@@ -198,9 +198,11 @@
       }
     }
   }
+}
 
-  /* MOBILE RESPONSIVENESS */
-  @media (max-width: 768px) {
+/* MOBILE RESPONSIVENESS */
+@media (max-width: 768px) {
+  .history-page {
     padding: 25px 15px;
 
     .history-header {
@@ -231,8 +233,10 @@
       padding: 40px 16px;
     }
   }
+}
 
-  @media (max-width: 480px) {
+@media (max-width: 480px) {
+  .history-page {
     padding: 20px 12px;
 
     .history-header {
@@ -265,6 +269,7 @@
 
     .empty-state {
       padding: 30px 12px;
+
       .empty-icon {
         font-size: 36px;
       }
@@ -281,3 +286,4 @@
     }
   }
 }
+
