@@ -120,5 +120,23 @@ async function generateResumePdfController(req, res) {
     }
 }
 
-module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController };
+/** 
+ * @description Controller to get my interview reports.
+ */
+async function getMyReportsController(req, res) {
+    try {
+        const reports = await interviewReportModel.find({ user: req.user.id })
+            .sort({ createdAt: -1 });
 
+        res.status(200).json({
+            reports
+        });
+    } catch (error) {
+        console.error('Error fetching my reports:', error);
+        res.status(500).json({
+            message: "Failed to fetch reports. Please try again."
+        });
+    }
+}
+
+module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController, getMyReportsController };

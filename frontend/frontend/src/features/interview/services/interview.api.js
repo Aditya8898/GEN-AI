@@ -49,3 +49,16 @@ const response = await api.get(`/api/interview/report/${id}`)
         throw err
     }
 }
+
+/**
+ * Get all interview reports for the logged-in user (my-reports)
+ */
+export async function getMyReports() {
+    try {
+        const response = await api.get('/api/interview/my-reports')
+        return response.data
+    } catch (err) {
+        console.error('Error fetching my reports:', err)
+        throw err
+    }
+}

@@ -21,7 +21,12 @@ interviewRouter.post("/", authMiddleware.authUser, upload.single("resume"), inte
  */
 interviewRouter.get("/report/:interviewId", authMiddleware.authUser, interviewController.getInterviewReportByIdController)
 
-
+/**
+ * @route GET /api/interview/my-reports
+ * @description get all interview reports of logged in user.
+ * @access private
+ */
+interviewRouter.get("/my-reports", authMiddleware.authUser, interviewController.getMyReportsController)
 /**
  * @route GET /api/interview/
  * @description get all interview reports of logged in user.
