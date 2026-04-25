@@ -55,4 +55,26 @@
       background-color: #c0392b;
     }
   }
+
+  @media (max-width: 600px) {
+    .navbar-container {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0 0.75rem;
+    }
+
+    .navbar-brand {
+      font-size: 1.2rem;
+    }
+
+    .navbar-menu {
+      gap: 0.5rem;
+    }
+
+    .navbar-link,
+    .navbar-logout {
+      padding: 0.4rem 0.7rem;
+      font-size: 0.9rem;
+    }
+  }
 }
