@@ -1,4 +1,4 @@
-import React, { useActionState, useState } from 'react'
+import React, { useState } from 'react'
 import {useNavigate, Link} from 'react-router-dom'
 import {useAuth} from '../hooks/useAuth'
 
@@ -28,7 +28,7 @@ const Register = () => {
   return (
     <main>
         <div className="form-container">
-          <h1>Register</h1>
+          <h1 className="form-title">Register</h1>
 
           <form onSubmit={handleSubmit}>
             <div className="input-group">
@@ -53,7 +53,7 @@ const Register = () => {
             <button className='button primary-button'>Register</button>
           </form>
 
-          <p>Already have an account? <Link to={"/login"}>Login</Link></p>
+          <p className="form-footer">Already have an account? <Link to={"/login"}>Login</Link></p>
         </div>
       </main>
   )
