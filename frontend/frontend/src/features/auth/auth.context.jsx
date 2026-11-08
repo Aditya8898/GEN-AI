@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const { data } = await getMe();
+        const data = await getMe();
         setUser(data.user || null);
       } catch (err) {
         // User not logged in (401) or server error - stay logged out

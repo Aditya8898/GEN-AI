@@ -1,0 +1,23 @@
+{
+  "name": "interview-ai-app",
+  "version": "1.0.0",
+  "description": "Full-Stack Generative AI Interview Preparation & Resume Tailoring Application",
+  "scripts": {
+    "start": "npm --prefix backend start",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build"
+  },
+  "keywords": [
+    "generative-ai",
+    "interview-prep",
+    "resume-builder",
+    "gemini",
+    "react",
+    "nodejs",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC"
+}
+

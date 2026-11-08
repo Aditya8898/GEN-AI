@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../style/home.scss";
-import { FaFileAlt, FaUser, FaUpload } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
-import { generateInterviewReport } from "../services/interview.api";
+import { FaFileAlt, FaUser, FaUpload, FaHistory, FaArrowRight } from "react-icons/fa";
+import { useNavigate, Link } from "react-router-dom";
+import { generateInterviewReport, getInterviewReports } from "../services/interview.api";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -12,6 +12,24 @@ const Home = () => {
   const [selfDescription, setSelfDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [pastReports, setPastReports] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+
+  useEffect(() => {
+    const fetchPastReports = async () => {
+      try {
+        setLoadingReports(true);
+        const data = await getInterviewReports();
+        setPastReports(data.interviewReports || []);
+      } catch (err) {
+        console.error("Failed to load past reports:", err);
+      } finally {
+        setLoadingReports(false);
+      }
+    };
+
+    fetchPastReports();
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -54,7 +72,7 @@ const Home = () => {
       const response = await generateInterviewReport(formData);
 
       // Navigate to interview page with report ID
-navigate(`/interview/${response.interviewReport._id}`);
+      navigate(`/interview/${response.interviewReport._id}`);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to generate interview report");
       console.error("Error:", err);
@@ -163,6 +181,44 @@ navigate(`/interview/${response.interviewReport._id}`);
           </button>
         </div>
       </form>
+
+      {/* PAST INTERVIEW REPORTS */}
+      {pastReports.length > 0 && (
+        <div className="past-reports-section">
+          <h2>
+            <FaHistory style={{ marginRight: "10px", color: "#f43f5e" }} />
+            Your Previous Interview Reports ({pastReports.length})
+          </h2>
+          <div className="reports-grid">
+            {pastReports.map((report) => (
+              <Link
+                key={report._id}
+                to={`/interview/${report._id}`}
+                className="report-card"
+              >
+                <div className="report-card-header">
+                  <h3>{report.title || "Interview Strategy Plan"}</h3>
+                  <span className={`score-badge ${report.matchScore >= 80 ? 'high' : report.matchScore >= 60 ? 'mid' : 'low'}`}>
+                    {report.matchScore ? `${report.matchScore}%` : 'N/A'}
+                  </span>
+                </div>
+                <div className="report-card-footer">
+                  <span className="report-date">
+                    {new Date(report.createdAt).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </span>
+                  <span className="view-link">
+                    View Plan <FaArrowRight style={{ fontSize: "11px", marginLeft: "4px" }} />
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </main>
   );
 };

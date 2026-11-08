@@ -21,12 +21,7 @@ interviewRouter.post("/", authMiddleware.authUser, upload.single("resume"), inte
  */
 interviewRouter.get("/report/:interviewId", authMiddleware.authUser, interviewController.getInterviewReportByIdController)
 
-/**
- * @route GET /api/interview/my-reports
- * @description get all interview reports of logged in user.
- * @access private
- */
-interviewRouter.get("/my-reports", authMiddleware.authUser, interviewController.getMyReportsController)
+
 /**
  * @route GET /api/interview/
  * @description get all interview reports of logged in user.
@@ -36,11 +31,12 @@ interviewRouter.get("/", authMiddleware.authUser, interviewController.getAllInte
 
 
 /**
- * @route GET /api/interview/resume/pdf
+ * @route POST & GET /api/interview/resume/pdf/:interviewReportId
  * @description generate resume pdf on the basis of user self description, resume content and job description.
  * @access private
  */
 interviewRouter.post("/resume/pdf/:interviewReportId", authMiddleware.authUser, interviewController.generateResumePdfController)
+interviewRouter.get("/resume/pdf/:interviewReportId", authMiddleware.authUser, interviewController.generateResumePdfController)
 
 
 

@@ -7,25 +7,14 @@ export const useAuth = () => {
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  const {user, setUser, loading, setLoading} = context;
+  const { user, setUser, loading, setLoading } = context;
 
-
-  const handleLogin = async ({email, password}) => {
+  const handleLogin = async ({ email, password }) => {
     setLoading(true);
     try {
-      const data = await login({email, password});
-      
-      // Sync with backend via getMe (validate cookie), fallback to login data
-      let syncedUser = data.user;
-      try {
-        const meResponse = await getMe();
-        syncedUser = meResponse.data.user || data.user;
-      } catch (syncErr) {
-        console.error('Post-login getMe sync failed:', syncErr);
-      }
-      
-      setUser(syncedUser);
-      return { success: true };
+      const data = await login({ email, password });
+      setUser(data.user);
+      return { success: true, user: data.user };
     } catch (err) {
       console.error('Login failed:', err);
       throw err;
@@ -34,13 +23,12 @@ export const useAuth = () => {
     }
   };
 
-
-  const handleRegister = async ({username, email, password}) => {
+  const handleRegister = async ({ username, email, password }) => {
     setLoading(true);
     try {
-      const data = await register({username, email, password});
+      const data = await register({ username, email, password });
       setUser(data.user);
-      return { success: true };
+      return { success: true, user: data.user };
     } catch (err) {
       console.error('Register failed:', err);
       throw err;
@@ -48,7 +36,6 @@ export const useAuth = () => {
       setLoading(false);
     }
   };
-
 
   const handleLogout = async () => {
     setLoading(true);
@@ -58,6 +45,7 @@ export const useAuth = () => {
       return { success: true };
     } catch (err) {
       console.error('Logout failed:', err);
+      setUser(null);
       throw err;
     } finally {
       setLoading(false);

@@ -1,25 +1,29 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import "../style/interview.scss";
-import { useParams } from "react-router-dom";
-import { getInterviewReportById } from "../services/interview.api";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { getInterviewReportById, downloadResumePdf } from "../services/interview.api";
 
 const Interview = () => {
   const { interviewId } = useParams();
+  const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState("roadmap");
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const reportRef = useRef(null);
 
   useEffect(() => {
+    if (!interviewId) {
+      navigate("/");
+      return;
+    }
+
     const fetchReport = async () => {
       try {
         setLoading(true);
+        setError("");
         const data = await getInterviewReportById(interviewId);
-setReport(data.interviewReport);
+        setReport(data.interviewReport);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load interview report");
       } finally {
@@ -27,10 +31,20 @@ setReport(data.interviewReport);
       }
     };
 
-    if (interviewId) {
-      fetchReport();
+    fetchReport();
+  }, [interviewId, navigate]);
+
+  const handleDownloadResume = async () => {
+    if (!interviewId) return;
+    try {
+      setDownloading(true);
+      await downloadResumePdf(interviewId);
+    } catch (err) {
+      alert("Failed to download tailored resume. Please try again.");
+    } finally {
+      setDownloading(false);
     }
-  }, [interviewId]);
+  };
 
   if (loading) {
     return (
@@ -43,54 +57,17 @@ setReport(data.interviewReport);
   if (error || !report) {
     return (
       <main className="loading-screen">
-        <h1>❌ {error || "Interview report not found"}</h1>
+        <div style={{ textAlign: "center" }}>
+          <h1>❌ {error || "Interview report not found"}</h1>
+          <p style={{ marginTop: "16px" }}>
+            <Link to="/" style={{ color: "#f43f5e", textDecoration: "underline" }}>
+              ← Return to Dashboard
+            </Link>
+          </p>
+        </div>
       </main>
     );
   }
-
-  const generatePDF = async () => {
-    if (!reportRef.current) return;
-    
-    try {
-      setIsGeneratingPDF(true);
-      const canvas = await html2canvas(reportRef.current, { 
-        scale: 2,
-        useCORS: true,
-        logging: false
-      });
-      
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      let position = 0;
-      let remainingHeight = pdfHeight;
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-      remainingHeight -= pageHeight;
-
-      while (remainingHeight > 0) {
-        position = position - pageHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-        remainingHeight -= pageHeight;
-      }
-
-      pdf.save("interview-report.pdf");
-    } catch (err) {
-      console.error("Failed to generate PDF:", err);
-      alert("Failed to generate PDF. Please try again.");
-    } finally {
-      setIsGeneratingPDF(false);
-    }
-  };
 
   const scoreColor =
     report.matchScore >= 80 ? "score--high" :
@@ -120,6 +97,12 @@ setReport(data.interviewReport);
         >
           Road Map
         </button>
+
+        <div style={{ marginTop: "30px", borderTop: "1px solid rgba(51, 65, 85, 0.3)", paddingTop: "15px" }}>
+          <Link to="/" style={{ color: "#94a3b8", fontSize: "13px", textDecoration: "none", display: "flex", alignItems: "center", gap: "6px" }}>
+            ← Back to Home
+          </Link>
+        </div>
       </aside>
 
       {/* CENTER CONTENT */}
@@ -215,14 +198,6 @@ setReport(data.interviewReport);
 
       {/* RIGHT SIDEBAR */}
       <aside className="sidebar">
-        <button 
-          className="download-pdf-btn" 
-          onClick={generatePDF} 
-          disabled={isGeneratingPDF}
-        >
-          {isGeneratingPDF ? "⏳ Generating..." : "📄 Download PDF"}
-        </button>
-
         <div className="score-box">
           <p className="score-title">MATCH SCORE</p>
           <div className={`circle ${scoreColor}`}>{report.matchScore}%</div>
@@ -253,64 +228,17 @@ setReport(data.interviewReport);
             })}
           </div>
         </div>
+
+        <div className="resume-download-box">
+          <button
+            className="download-resume-btn"
+            onClick={handleDownloadResume}
+            disabled={downloading}
+          >
+            {downloading ? "⏳ Generating Resume..." : "📄 Download Tailored Resume"}
+          </button>
+        </div>
       </aside>
-
-      {/* HIDDEN PDF CONTAINER */}
-      <div className="pdf-export-container" ref={reportRef}>
-        <div className="pdf-header">
-          <h2>AI Interview Report</h2>
-          <div className="pdf-score">
-            Match Score: <span>{report.matchScore}%</span>
-          </div>
-        </div>
-
-        <div className="pdf-section">
-          <h3>Skill Gaps</h3>
-          <div className="pdf-tags">
-            {report.skillGaps?.map((gap, i) => (
-              <span key={i} className="pdf-tag">
-                {gap.skill} ({gap.severity})
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="pdf-section">
-          <h3>Preparation Road Map</h3>
-          {report.preparationPlan?.map((item, index) => (
-            <div key={index} className="pdf-plan-item">
-              <h4>Day {item.day}: {item.focus}</h4>
-              <ul>
-                {item.tasks?.map((task, i) => (
-                  <li key={i}>{task}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <div className="pdf-section">
-          <h3>Technical Questions</h3>
-          {report.technicalQuestions?.map((q, i) => (
-            <div key={i} className="pdf-question">
-              <h4>Q{i + 1}: {q.question}</h4>
-              <p><strong>Intention:</strong> {q.intention}</p>
-              <p><strong>Answer:</strong> {q.answer}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="pdf-section">
-          <h3>Behavioral Questions</h3>
-          {report.behavioralQuestions?.map((q, i) => (
-            <div key={i} className="pdf-question">
-              <h4>Q{i + 1}: {q.question}</h4>
-              <p><strong>Intention:</strong> {q.intention}</p>
-              <p><strong>Answer:</strong> {q.answer}</p>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };

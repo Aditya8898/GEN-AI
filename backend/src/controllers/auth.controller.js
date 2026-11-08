@@ -3,13 +3,20 @@ const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 const tokenBlacklistModel = require("../models/blacklist.model")
 
+const isProduction = process.env.NODE_ENV === "production";
+const cookieOptions = {
+    httpOnly: true,
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
+};
+
 /**
  * @name registerUserController
  * @description register a new user, expects username, email and password in the request body
  * @access Public
  */
 async function registerUserController(req, res) {
-
     try {
         const { username, email, password } = req.body;
 
@@ -19,8 +26,11 @@ async function registerUserController(req, res) {
             });
         }
 
+        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedUsername = username.trim();
+
         const isUserAlreadyExists = await userModel.findOne({
-            $or: [ { username }, { email } ]
+            $or: [ { username: normalizedUsername }, { email: normalizedEmail } ]
         });
 
         if (isUserAlreadyExists) {
@@ -32,8 +42,8 @@ async function registerUserController(req, res) {
         const hash = await bcrypt.hash(password, 10);
 
         const user = await userModel.create({
-            username,
-            email,
+            username: normalizedUsername,
+            email: normalizedEmail,
             password: hash
         });
 
@@ -43,14 +53,11 @@ async function registerUserController(req, res) {
             { expiresIn: "1d" }
         );
 
-        res.cookie("token", token, { 
-            httpOnly: true, 
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            secure: process.env.NODE_ENV === "production"
-        });
+        res.cookie("token", token, cookieOptions);
 
         res.status(201).json({
             message: "User registered successfully",
+            token,
             user: {
                 id: user._id,
                 username: user.username,
@@ -74,7 +81,15 @@ async function loginUserController(req, res) {
     try {
         const { email, password } = req.body;
 
-        const user = await userModel.findOne({ email });
+        if (!email || !password) {
+            return res.status(400).json({
+                message: "Please provide email and password"
+            });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        const user = await userModel.findOne({ email: normalizedEmail });
 
         if (!user) {
             return res.status(400).json({
@@ -96,13 +111,11 @@ async function loginUserController(req, res) {
             { expiresIn: "1d" }
         );
 
-        res.cookie("token", token, { 
-            httpOnly: true, 
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            secure: process.env.NODE_ENV === "production"
-        });
+        res.cookie("token", token, cookieOptions);
+
         res.status(200).json({
             message: "User loggedIn successfully.",
+            token,
             user: {
                 id: user._id,
                 username: user.username,
@@ -124,13 +137,20 @@ async function loginUserController(req, res) {
  */
 async function logoutUserController(req, res) {
     try {
-        const token = req.cookies.token;
+        const token = req.cookies?.token || 
+            (req.headers.authorization && req.headers.authorization.startsWith("Bearer ") 
+                ? req.headers.authorization.split(" ")[1] 
+                : null);
 
         if (token) {
             await tokenBlacklistModel.create({ token });
         }
 
-        res.clearCookie("token");
+        res.clearCookie("token", {
+            httpOnly: true,
+            sameSite: isProduction ? "none" : "lax",
+            secure: isProduction
+        });
 
         res.status(200).json({
             message: "User logged out successfully"
@@ -153,7 +173,9 @@ async function getMeController(req, res) {
         const user = await userModel.findById(req.user.id);
 
         if (!user) {
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({
+                message: "User not found"
+            });
         }
 
         res.status(200).json({

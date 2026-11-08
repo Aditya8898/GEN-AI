@@ -7,26 +7,39 @@ const interviewReportModel = require("../models/interviewReport.model")
  */
 async function generateInterViewReportController(req, res) {
     try {
+        const { selfDescription, jobDescription } = req.body;
+
+        if (!jobDescription || !jobDescription.trim()) {
+            return res.status(400).json({
+                message: "Job description is required."
+            });
+        }
+
+        if (!req.file && (!selfDescription || !selfDescription.trim())) {
+            return res.status(400).json({
+                message: "Either a resume PDF or a self-description is required."
+            });
+        }
+
         let resumeContent = '';
         if (req.file) {
             const pdfData = await pdfParse(req.file.buffer);
-            resumeContent = pdfData.text;
+            resumeContent = pdfData.text || '';
         }
-        // If no file, use empty resumeContent - proceed with selfDescription and jobDescription only
-        const { selfDescription, jobDescription } = req.body;
 
         const interViewReportByAi = await generateInterviewReport({
             resume: resumeContent,
-            selfDescription,
-            jobDescription
+            selfDescription: selfDescription || '',
+            jobDescription: jobDescription.trim()
         });
 
         const interviewReport = await interviewReportModel.create({
             user: req.user.id,
             resume: resumeContent,
-            selfDescription,
-            jobDescription,
-            ...interViewReportByAi
+            selfDescription: selfDescription || '',
+            jobDescription: jobDescription.trim(),
+            ...interViewReportByAi,
+            title: interViewReportByAi.title || "Interview Strategy Plan"
         });
 
         res.status(201).json({
@@ -36,7 +49,7 @@ async function generateInterViewReportController(req, res) {
     } catch (error) {
         console.error('Error generating interview report:', error);
         res.status(500).json({
-            message: "Failed to generate interview report. Please try again."
+            message: error.message || "Failed to generate interview report. Please try again."
         });
     }
 }
@@ -94,7 +107,7 @@ async function generateResumePdfController(req, res) {
     try {
         const { interviewReportId } = req.params;
 
-        const interviewReport = await interviewReportModel.findById(interviewReportId);
+        const interviewReport = await interviewReportModel.findOne({ _id: interviewReportId, user: req.user.id });
 
         if (!interviewReport) {
             return res.status(404).json({
@@ -104,7 +117,11 @@ async function generateResumePdfController(req, res) {
 
         const { resume, jobDescription, selfDescription } = interviewReport;
 
-        const pdfBuffer = await generateResumePdf({ resume, jobDescription, selfDescription });
+        const pdfBuffer = await generateResumePdf({ 
+            resume: resume || '', 
+            jobDescription: jobDescription || '', 
+            selfDescription: selfDescription || '' 
+        });
 
         res.set({
             "Content-Type": "application/pdf",
@@ -115,28 +132,10 @@ async function generateResumePdfController(req, res) {
     } catch (error) {
         console.error('Error generating resume PDF:', error);
         res.status(500).json({
-            message: "Failed to generate resume PDF. Please try again."
+            message: error.message || "Failed to generate resume PDF. Please try again."
         });
     }
 }
 
-/** 
- * @description Controller to get my interview reports.
- */
-async function getMyReportsController(req, res) {
-    try {
-        const reports = await interviewReportModel.find({ user: req.user.id })
-            .sort({ createdAt: -1 });
+module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController };
 
-        res.status(200).json({
-            reports
-        });
-    } catch (error) {
-        console.error('Error fetching my reports:', error);
-        res.status(500).json({
-            message: "Failed to fetch reports. Please try again."
-        });
-    }
-}
-
-module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController, getMyReportsController };
